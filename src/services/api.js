@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://pfe-backend-9eec.onrender.com/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
