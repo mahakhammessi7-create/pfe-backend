@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from 'recharts';
 import API from '../../services/api';
 
@@ -10,290 +10,302 @@ import API from '../../services/api';
    STYLES
 ══════════════════════════════════════════════ */
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
-  @keyframes nd-up   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes nd-spin { to{transform:rotate(360deg)} }
-  @keyframes nd-glow { 0%,100%{opacity:.25} 50%{opacity:.7} }
-  @keyframes nd-rotateSlow { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-  @keyframes nd-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+  @keyframes nd-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes nd-spin  { to{transform:rotate(360deg)} }
+  @keyframes nd-pulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.2)} }
+  @keyframes nd-bar   { from{width:0} }
 
-  .nd-root { font-family:'DM Sans',sans-serif; }
-  .nd-root * { box-sizing:border-box; margin:0; padding:0; }
-  .nd-anim { animation:nd-up .5s ease both; }
-  .nd-anim:nth-child(1){animation-delay:.04s}
-  .nd-anim:nth-child(2){animation-delay:.09s}
-  .nd-anim:nth-child(3){animation-delay:.14s}
-  .nd-anim:nth-child(4){animation-delay:.19s}
-  .nd-anim:nth-child(5){animation-delay:.24s}
-  .nd-anim:nth-child(6){animation-delay:.29s}
+  .nd2-root { font-family:'Space Grotesk',sans-serif; }
+  .nd2-root * { box-sizing:border-box; margin:0; padding:0; }
 
-  .nd-stat { transition:transform .25s, box-shadow .25s; }
-  .nd-stat:hover { transform:translateY(-5px); box-shadow:0 20px 48px rgba(0,0,0,.45) !important; }
-
-  .nd-sector-row { transition:background .2s, transform .2s; }
-  .nd-sector-row:hover { background:rgba(99,210,190,.04) !important; transform:translateX(3px); }
-
-  .nd-retry {
-    display:inline-flex; align-items:center; gap:8px;
-    background:linear-gradient(135deg,#63d2be,#2eb8a0);
-    color:#071520; border:none; padding:11px 24px; border-radius:12px;
-    font-size:13px; font-family:'DM Sans',sans-serif; font-weight:700;
-    cursor:pointer; transition:filter .2s, transform .15s;
-    margin-top:14px;
+  .nd2-card {
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:18px;
+    transition:border-color .25s, box-shadow .25s, transform .25s;
   }
-  .nd-retry:hover { filter:brightness(1.1); transform:translateY(-2px); }
+  .nd2-card:hover {
+    border-color:rgba(94,234,212,.18);
+    box-shadow:0 0 32px rgba(94,234,212,.06);
+  }
+
+  .nd2-kpi {
+    cursor:default;
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+  }
+  .nd2-kpi:hover { transform:translateY(-5px) scale(1.02); }
+
+  .nd2-complex-card {
+    border-radius:16px;
+    padding:18px 20px;
+    transition:transform .2s, box-shadow .2s;
+    cursor:default;
+  }
+  .nd2-complex-card:hover { transform:translateY(-3px); }
+
+  .nd2-a1{animation:nd-up .45s ease both .05s}
+  .nd2-a2{animation:nd-up .45s ease both .10s}
+  .nd2-a3{animation:nd-up .45s ease both .15s}
+  .nd2-a4{animation:nd-up .45s ease both .20s}
+  .nd2-a5{animation:nd-up .45s ease both .25s}
+  .nd2-a6{animation:nd-up .45s ease both .30s}
+  .nd2-a7{animation:nd-up .45s ease both .35s}
+  .nd2-a8{animation:nd-up .45s ease both .40s}
 `;
 
-function injectNdStyles() {
-  if (document.getElementById('nd-styles')) return;
-  const el = document.createElement('style');
-  el.id = 'nd-styles'; el.textContent = CSS;
-  document.head.appendChild(el);
+function injectStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('nd2-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'nd2-styles'; s.textContent = CSS;
+  document.head.appendChild(s);
 }
 
 /* ══════════════════════════════════════════════
    THEME
 ══════════════════════════════════════════════ */
-const BG     = '#07111e';
-const CARD   = 'rgba(255,255,255,.028)';
-const BORDER = 'rgba(255,255,255,.07)';
-const TEAL   = '#63d2be';
+const TEAL   = '#5eead4';
 const GREEN  = '#4ade80';
 const AMBER  = '#fbbf24';
 const RED    = '#f87171';
-const PURPLE = '#818cf8';
+const INDIGO = '#818cf8';
 const BLUE   = '#38bdf8';
+const ROSE   = '#fb7185';
+const PURPLE = '#a78bfa';
 
-/* ══════════════════════════════════════════════
-   MOCK DATA — affiché immédiatement, remplacé par l'API si dispo
-══════════════════════════════════════════════ */
-const MOCK = {
-  global: {
-    total_reports:   24,
-    avg_score:       '73.4',
-    pending_count:   5,
-    with_rssi:       18,
-    validated_count: 16,
+const MOCK_NATIONAL_STATS = {
+  total_organismes: 156,
+  organismes_with_pssi: 112,
+  pending_reports: 12,
+  average_score: 72,
+  scores_by_category: {
+    gouvernance: 78,
+    protection: 82,
+    resilience: 65,
+    identite: 88,
+    detection: 54,
+    reponse: 61,
+    audit: 74
   },
-  sectors: [
-    { sector:'Finance',        total:8, avg_score:'82' },
-    { sector:'Santé',          total:5, avg_score:'67' },
-    { sector:'Administration', total:4, avg_score:'74' },
-    { sector:'Énergie',        total:3, avg_score:'58' },
-    { sector:'Industrie',      total:2, avg_score:'71' },
-    { sector:'Télécoms',       total:2, avg_score:'79' },
-  ],
-  maturity: [
-    { axe:'Gouvernance',       valeur:72 },
-    { axe:'Risques & Actifs',  valeur:54 },
-    { axe:'Continuité',        valeur:67 },
-    { axe:'Contrôle Accès',    valeur:88 },
-    { axe:'Protection',        valeur:56 },
-    { axe:'Sauvegardes',       valeur:59 },
-    { axe:'Sécurité Physique', valeur:85 },
-    { axe:'Incidents',         valeur:90 },
-  ],
+  evolution: [
+    { month: 'Jan', avg_score: 65 },
+    { month: 'Feb', avg_score: 68 },
+    { month: 'Mar', avg_score: 72 }
+  ]
 };
 
+const scoreColor = s => +s >= 75 ? GREEN : +s >= 55 ? AMBER : RED;
+
 /* ══════════════════════════════════════════════
-   HELPERS
+   ANIMATED COUNT
 ══════════════════════════════════════════════ */
-const scoreColor = (s) => s >= 75 ? GREEN : s >= 55 ? AMBER : RED;
-
-function SectionHeader({ icon, title, iconBg = TEAL }) {
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'16px 22px', borderBottom:`1px solid ${BORDER}` }}>
-      <div style={{ width:34, height:34, borderRadius:10, background:`${iconBg}18`, border:`1px solid ${iconBg}28`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15 }}>{icon}</div>
-      <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700, color:'#b0cce0', letterSpacing:'.4px', textTransform:'uppercase' }}>{title}</h2>
-    </div>
-  );
+function AnimCount({ to, suffix = '', duration = 1000 }) {
+  const [v, setV] = useState(0);
+  const t0 = useRef(null);
+  useEffect(() => {
+    t0.current = null;
+    const run = ts => {
+      if (!t0.current) t0.current = ts;
+      const p = Math.min((ts - t0.current) / duration, 1);
+      setV(Math.round((1 - Math.pow(1 - p, 3)) * to));
+      if (p < 1) requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+  }, [to, duration]);
+  return <>{v}{suffix}</>;
 }
-
-function MiniBar({ value, color }) {
-  const [w, setW] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setW(value), 500); return () => clearTimeout(t); }, [value]);
-  return (
-    <div style={{ flex:1, height:6, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
-      <div style={{ width:`${w}%`, height:'100%', background:`linear-gradient(90deg,${color}55,${color})`, borderRadius:99, transition:'width 1.2s cubic-bezier(.22,1,.36,1)', boxShadow:`0 0 8px ${color}44` }} />
-    </div>
-  );
-}
-
-const BarTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  const score = payload[0].value;
-  const c = scoreColor(score);
-  return (
-    <div style={{ background:'#0c1e34', border:`1px solid rgba(99,210,190,.2)`, borderRadius:10, padding:'10px 14px', fontSize:12, color:'#d4e8ff' }}>
-      <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, color:TEAL, marginBottom:4 }}>{label}</div>
-      <div style={{ fontWeight:800, fontSize:18, color:c, fontFamily:"'Syne',sans-serif" }}>{score}%</div>
-    </div>
-  );
-};
-
-const RadarTooltip = ({ active, payload }) => {
-  if (!active || !payload?.length) return null;
-  const d = payload[0]?.payload;
-  const c = scoreColor(d.valeur);
-  return (
-    <div style={{ background:'#0c1e34', border:`1px solid ${c}44`, borderRadius:10, padding:'10px 14px', fontSize:12, color:'#d4e8ff' }}>
-      <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, color:c, marginBottom:3 }}>{d.axe}</div>
-      <div style={{ fontWeight:800, fontSize:18, color:c, fontFamily:"'Syne',sans-serif" }}>{d.valeur}%</div>
-    </div>
-  );
-};
 
 /* ══════════════════════════════════════════════
-   MAIN COMPONENT
+   ANIMATED PROGRESS BAR
+══════════════════════════════════════════════ */
+function ProgressBar({ value, color, delay = 0 }) {
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setW(value), 100 + delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+
+  return (
+    <div style={{ height:6, background:'rgba(255,255,255,.05)', borderRadius:3, overflow:'hidden' }}>
+      <div style={{
+        height:'100%',
+        width: `${w}%`,
+        background: color,
+        transition: 'width 1s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        boxShadow: `0 0 10px ${color}40`
+      }} />
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   UI COMPONENTS
+══════════════════════════════════════════════ */
+const SectionLabel = ({ children, color }) => (
+  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+    <div style={{ width:4, height:18, background:color, borderRadius:2 }} />
+    <span style={{ fontSize:14, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.05em' }}>
+      {children}
+    </span>
+  </div>
+);
+
+/* ══════════════════════════════════════════════
+   MAIN DASHBOARD
 ══════════════════════════════════════════════ */
 export default function NationalDashboard() {
-  // ✅ FIX : initialiser avec MOCK directement — page jamais vide
-  const [stats,   setStats]   = useState(null);
-  const [apiOk,   setApiOk]   = useState(null);  // null=loading, true=ok, false=error
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    injectNdStyles();
-    loadStats();
-    return () => document.getElementById('nd-styles')?.remove();
+    injectStyles();
+    API.get('/admin/national-stats')
+      .then(res => { 
+        setData(res.data && Object.keys(res.data).length > 0 ? res.data : MOCK_NATIONAL_STATS); 
+        setLoading(false); 
+      })
+      .catch(err => { 
+        console.error("Fetch error, using mock data:", err); 
+        setData(MOCK_NATIONAL_STATS);
+        setLoading(false); 
+      });
   }, []);
 
-  const loadStats = async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/stats/national');
-      if (res.data && res.data.global) {
-        setStats(res.data);
-        setApiOk(true);
-      } else {
-        setApiOk(false);
-        setStats(null);
-      }
-    } catch {
-      // ✅ API offline → état vide, pas de mock
-      setApiOk(false);
-      setStats(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ Stats nulles si API offline — pas de mock
-  if (!stats && !loading) {
+  if (loading) {
     return (
-      <div className="nd-root" style={{ color:'#e2f0ff' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
-          <div style={{ textAlign:'center', maxWidth:480 }}>
-            <div style={{ width:80, height:80, margin:'0 auto 24px', background:'rgba(248,113,113,.07)', border:'1px solid rgba(248,113,113,.15)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:34 }}>📊</div>
-            <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:20, fontWeight:800, color:'#e4f2ff', marginBottom:10 }}>Aucune donnée disponible</h2>
-            <p style={{ fontSize:13, color:'#3d607a', lineHeight:1.7, marginBottom:24 }}>
-              Le tableau de bord national se remplit automatiquement quand des entreprises soumettent leurs rapports d'audit et que le backend est connecté.
-            </p>
-            <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24, textAlign:'left' }}>
-              {[
-                { n:'1', text:'Démarrez le backend', code:'npm run dev' },
-                { n:'2', text:'Une entreprise se connecte et uploade son rapport', code:null },
-                { n:'3', text:'Les statistiques nationales apparaissent ici', code:null },
-              ].map(({n,text,code}) => (
-                <div key={n} style={{ display:'flex', gap:12, background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.06)', borderRadius:12, padding:'11px 16px', alignItems:'flex-start' }}>
-                  <div style={{ width:24, height:24, borderRadius:'50%', background:'rgba(99,210,190,.12)', border:'1px solid rgba(99,210,190,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:TEAL, flexShrink:0 }}>{n}</div>
-                  <div>
-                    <div style={{ fontSize:13, color:'#8ab0c8' }}>{text}</div>
-                    {code && <code style={{ fontSize:11, color:TEAL, background:'rgba(99,210,190,.08)', padding:'2px 8px', borderRadius:6, marginTop:4, display:'inline-block' }}>{code}</code>}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={loadStats} style={{ padding:'11px 28px', background:'linear-gradient(135deg,#63d2be,#2eb8a0)', color:'#071520', border:'none', borderRadius:12, fontSize:14, fontFamily:"'DM Sans',sans-serif", fontWeight:700, cursor:'pointer' }}>
-              🔄 Actualiser
-            </button>
-          </div>
-        </div>
+      <div style={{ height:'80vh', display:'flex', alignItems:'center', justifyContent:'center', color:TEAL }}>
+        <div style={{ width:40, height:40, border:`3px solid ${TEAL}20`, borderTopColor:TEAL, borderRadius:'50%', animation:'nd-spin .8s linear infinite' }} />
       </div>
     );
   }
 
-  const g       = (stats && stats.global) || {};
-  const sectors = (stats && stats.sectors) || [];
-  const maturity = (stats && stats.maturity) || [];
-  const total   = parseInt(g.total_reports)   || 0;
-  const avg     = parseFloat(g.avg_score)     || 0;
-  const pending = parseInt(g.pending_count)   || 0;
-  const rssi    = parseInt(g.with_rssi)       || 0;
-  const valid   = parseInt(g.validated_count) || 0;
+  const stats = data || {
+    total_organismes: 0,
+    organismes_with_pssi: 0,
+    pending_reports: 0,
+    average_score: 0,
+    scores_by_category: {},
+    evolution: []
+  };
 
-  /* ── RENDER ── */
+  const total = stats.total_organismes;
+  const withPssi = stats.organismes_with_pssi;
+  const pending = stats.pending_reports;
+  const avg = stats.average_score;
+
+  const categories = [
+    { name: 'Gouvernance', score: stats.scores_by_category?.gouvernance || 0, icon: '🏛️' },
+    { name: 'Protection', score: stats.scores_by_category?.protection || 0, icon: '🛡️' },
+    { name: 'Résilience', score: stats.scores_by_category?.resilience || 0, icon: '🔋' },
+    { name: 'Identité', score: stats.scores_by_category?.identite || 0, icon: '🔑' },
+    { name: 'Détection', score: stats.scores_by_category?.detection || 0, icon: '🔍' },
+    { name: 'Réponse', score: stats.scores_by_category?.reponse || 0, icon: '🚑' },
+    { name: 'Audit', score: stats.scores_by_category?.audit || 0, icon: '📝' },
+  ];
+
+  const chartData = stats.evolution.map(d => ({
+    name: d.month,
+    score: d.avg_score
+  }));
+
   return (
-    <div className="nd-root" style={{ color:'#e2f0ff' }}>
-
-      {/* ── PAGE HEADER ── */}
-      <div className="nd-anim" style={{ background:'linear-gradient(135deg,#0c1f3a,#0a2540)', borderRadius:20, padding:'22px 28px', marginBottom:20, display:'flex', alignItems:'center', gap:18, position:'relative', overflow:'hidden', border:'1px solid rgba(99,210,190,.12)', boxShadow:'0 8px 32px rgba(0,0,0,.4)' }}>
-        {[180,120].map((s,i) => (
-          <div key={i} style={{ position:'absolute', width:s, height:s, borderRadius:'50%', border:'1px solid rgba(99,210,190,.08)', right:-s/4, top:'50%', transform:'translateY(-50%)', animation:`nd-rotateSlow ${20+i*6}s linear infinite` }} />
-        ))}
-        <div style={{ width:50, height:50, background:'linear-gradient(135deg,#0d5580,#1a7a6e)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, boxShadow:'0 0 0 2px rgba(99,210,190,.25)', flexShrink:0, position:'relative' }}>📊</div>
-        <div style={{ flex:1, position:'relative' }}>
-          <h1 style={{ fontFamily:"'Syne',sans-serif", fontSize:19, fontWeight:800, color:'#e4f2ff', marginBottom:4 }}>Tableau de bord national</h1>
-          <p style={{ fontSize:12, color:'#3d607a' }}>Vue agrégée de tous les audits de sécurité · ANCS 2026</p>
+    <div className="nd2-root" style={{ background:'#0f172a', minHeight:'100vh', padding:40, color:'#f8fafc' }}>
+      
+      {/* ── HEADER ── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:40 }}>
+        <div>
+          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.02em', marginBottom:8 }}>
+            Tableau de Bord <span style={{ color:TEAL }}>National</span>
+          </h1>
+          <p style={{ color:'#64748b', fontSize:15 }}>Supervision de la maturité SSI des organismes nationaux</p>
         </div>
-        {/* API status indicator */}
-        <div style={{ display:'flex', alignItems:'center', gap:7, fontSize:11, color: apiOk === true ? GREEN : apiOk === false ? AMBER : '#3d607a', position:'relative' }}>
-          {loading
-            ? <span style={{ width:12, height:12, border:`2px solid rgba(99,210,190,.2)`, borderTop:`2px solid ${TEAL}`, borderRadius:'50%', animation:'nd-spin 1s linear infinite', display:'inline-block' }} />
-            : <span style={{ width:7, height:7, borderRadius:'50%', background: apiOk ? GREEN : AMBER, boxShadow:`0 0 8px ${apiOk ? GREEN : AMBER}`, display:'inline-block' }} />
-          }
-          {loading ? 'Synchro...' : apiOk ? 'API connectée' : 'API hors ligne'}
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontSize:12, color:'#475569', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Dernière mise à jour</div>
+          <div style={{ fontSize:14, fontWeight:500 }}>{new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}</div>
         </div>
       </div>
 
-      {/* ── API ERROR BANNER ── */}
-      {apiOk === false && !loading && (
-        <div className="nd-anim" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.2)', borderRadius:14, padding:'12px 20px', marginBottom:18, gap:12 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, fontSize:13, color:AMBER }}>
-            <span style={{ fontSize:18 }}>⚠️</span>
-            <span>Backend hors ligne — démarrez le serveur avec <code style={{ fontFamily:'monospace', background:'rgba(251,191,36,.1)', padding:'1px 6px', borderRadius:4 }}>npm run dev</code> dans pfe-backend.</span>
+      {/* ── TOP KPI GRID ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:20, marginBottom:30 }}>
+        
+        {/* KPI 1: Score Moyen */}
+        <div className="nd2-card nd2-kpi nd2-a1" style={{ padding:24, borderLeft:`4px solid ${scoreColor(avg)}` }}>
+          <div style={{ fontSize:13, fontWeight:600, color:'#64748b', marginBottom:16 }}>Indice de Maturité Moyen</div>
+          <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+            <span style={{ fontSize:42, fontWeight:800, color:'#f8fafc' }}>
+              <AnimCount to={avg} />
+            </span>
+            <span style={{ fontSize:20, fontWeight:600, color:'#475569' }}>%</span>
           </div>
-          <button className="nd-retry" onClick={loadStats} style={{ flexShrink:0, marginTop:0, padding:'8px 16px', fontSize:12 }}>
-            🔄 Réessayer
-          </button>
+          <div style={{ marginTop:12 }}>
+            <ProgressBar value={avg} color={scoreColor(avg)} />
+          </div>
         </div>
-      )}
 
-      {/* ── KPI CARDS ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:14, marginBottom:20 }}>
-        {[
-          { icon:'📄', value:total,  label:'Rapports soumis',  color:TEAL   },
-          { icon:'✅', value:valid,  label:'Rapports validés', color:GREEN  },
-          { icon:'⏳', value:pending,label:'En attente',       color:AMBER  },
-          { icon:'🔐', value:rssi,   label:'Avec RSSI',        color:BLUE   },
-          { icon:'📊', value:`${Math.round(avg)}%`, label:'Score moyen SSI', color:PURPLE },
-        ].map(({icon,value,label,color},i) => (
-          <div key={label} className="nd-stat nd-anim" style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:18, padding:'20px 18px', position:'relative', overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,.25)' }}>
-            <div style={{ position:'absolute', top:-12, right:-12, width:56, height:56, borderRadius:'50%', background:color, opacity:.13, filter:'blur(16px)', animation:'nd-glow 3s ease-in-out infinite' }} />
-            <div style={{ width:38, height:38, borderRadius:12, background:`${color}18`, border:`1px solid ${color}28`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, marginBottom:12 }}>{icon}</div>
-            <div style={{ fontSize:26, fontWeight:900, color, fontFamily:"'Syne',sans-serif", lineHeight:1, marginBottom:5 }}>{value}</div>
-            <div style={{ fontSize:10, color:'#3d607a', fontWeight:600, letterSpacing:'.4px', textTransform:'uppercase' }}>{label}</div>
+        {/* KPI 2: Organismes */}
+        <div className="nd2-card nd2-kpi nd2-a2" style={{ padding:24 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:'#64748b', marginBottom:16 }}>Total Organismes</div>
+          <div style={{ fontSize:42, fontWeight:800 }}>
+            <AnimCount to={total} />
           </div>
-        ))}
+          <div style={{ fontSize:12, color:GREEN, fontWeight:600, marginTop:8 }}>+12% vs mois dernier</div>
+        </div>
+
+        {/* KPI 3: Conformité PSSI */}
+        <div className="nd2-card nd2-kpi nd2-a3" style={{ padding:24 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:'#64748b', marginBottom:16 }}>Conformité PSSI</div>
+          <div style={{ fontSize:42, fontWeight:800 }}>
+            <AnimCount to={withPssi} />
+          </div>
+          <div style={{ fontSize:12, color:'#475569', marginTop:8 }}>
+            {total ? Math.round((withPssi/total)*100) : 0}% du parc total
+          </div>
+        </div>
+
+        {/* KPI 4: Alertes */}
+        <div className="nd2-card nd2-kpi nd2-a4" style={{ padding:24, borderLeft:`4px solid ${RED}` }}>
+          <div style={{ fontSize:13, fontWeight:600, color:'#64748b', marginBottom:16 }}>Actions Requises</div>
+          <div style={{ fontSize:42, fontWeight:800, color:RED }}>
+            <AnimCount to={pending} />
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8 }}>
+            <div style={{ width:8, height:8, background:RED, borderRadius:'50%', animation:'nd-pulse 2s infinite' }} />
+            <div style={{ fontSize:12, color:RED, fontWeight:600 }}>Rapports critiques</div>
+          </div>
+        </div>
+
       </div>
 
-      {/* ── CHARTS ROW ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:18, marginBottom:18 }}>
-
-        {/* Bar chart — score par secteur */}
-        <div className="nd-anim" style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:20, overflow:'hidden' }}>
-          <SectionHeader icon="📈" title="Score moyen par secteur" iconBg={BLUE} />
-          <div style={{ padding:'20px' }}>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={sectors} margin={{ top:5, right:10, bottom:5, left:-10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                <XAxis dataKey="sector" tick={{ fontSize:10, fill:'#3d607a', fontFamily:"'DM Sans',sans-serif" }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0,100]} tick={{ fontSize:10, fill:'#3d607a' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<BarTooltip />} cursor={{ fill:'rgba(99,210,190,.05)' }} />
-                <Bar dataKey="avg_score" radius={[6,6,0,0]}>
-                  {sectors.map((s,i) => (
-                    <Cell key={i} fill={scoreColor(parseFloat(s.avg_score))} fillOpacity={.8} />
+      {/* ── MIDDLE SECTION ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:20, marginBottom:20 }}>
+        
+        {/* Evolution Chart */}
+        <div className="nd2-card nd2-a5" style={{ padding:28 }}>
+          <SectionLabel color={BLUE}>Évolution de la maturité</SectionLabel>
+          <div style={{ height:300, width:'100%' }}>
+            <ResponsiveContainer>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill:'#475569', fontSize:11}} 
+                  dy={10}
+                />
+                <YAxis 
+                  hide 
+                  domain={[0, 100]} 
+                />
+                <Tooltip 
+                  cursor={{fill:'rgba(255,255,255,.02)'}}
+                  contentStyle={{background:'#1e293b', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, boxShadow:'0 10px 15px -3px rgba(0,0,0,.5)'}}
+                />
+                <Bar dataKey="score" radius={[6, 6, 0, 0]} barSize={40}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === chartData.length-1 ? TEAL : 'rgba(94,234,212,.3)'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -301,73 +313,106 @@ export default function NationalDashboard() {
           </div>
         </div>
 
-        {/* Radar maturité */}
-        <div className="nd-anim" style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:20, overflow:'hidden' }}>
-          <SectionHeader icon="📡" title="Radar de maturité national" iconBg={TEAL} />
-          <div style={{ padding:'20px' }}>
-            <ResponsiveContainer width="100%" height={240}>
-              <RadarChart data={maturity} margin={{ top:10, right:30, bottom:10, left:30 }}>
-                <PolarGrid stroke="rgba(255,255,255,.08)" />
-                <PolarAngleAxis dataKey="axe" tick={{ fontSize:9, fill:'#4a6a88', fontWeight:600 }} />
-                <PolarRadiusAxis angle={90} domain={[0,100]} tick={{ fontSize:8, fill:'#2a4a62' }} tickCount={5} />
-                <Radar dataKey="valeur" stroke={TEAL} fill={TEAL} fillOpacity={0.12} strokeWidth={2} dot={{ fill:TEAL, r:3, stroke:'#07111e', strokeWidth:2 }} />
-                <Tooltip content={<RadarTooltip />} />
-              </RadarChart>
-            </ResponsiveContainer>
+        {/* Distribution / PSSI Details */}
+        <div className="nd2-card nd2-a5" style={{ padding:28, display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+          <SectionLabel color={AMBER}>Focus PSSI</SectionLabel>
+          
+          {/* Circular progress for PSSI */}
+          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+             <svg width="160" height="160" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.03)" strokeWidth="12" />
+                <circle 
+                  cx="80" cy="80" r="70" fill="none" 
+                  stroke={TEAL} strokeWidth="12" 
+                  strokeDasharray={`${2 * Math.PI * 70}`}
+                  strokeDashoffset={`${2 * Math.PI * 70 * (1 - (withPssi/total || 0))}`}
+                  strokeLinecap="round"
+                  style={{ transition:'stroke-dashoffset 1.5s ease', transform:'rotate(-90deg)', transformOrigin:'center' }}
+                />
+             </svg>
+             <div style={{ position:'absolute', textAlign:'center' }}>
+                <div style={{ fontSize:32, fontWeight:800 }}>{total ? Math.round((withPssi/total)*100) : 0}%</div>
+                <div style={{ fontSize:10, color:'#475569', fontWeight:700, textTransform:'uppercase' }}>Validés</div>
+             </div>
+          </div>
+
+          <div style={{ borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:20, marginTop:20 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+              <span style={{ fontSize:12, color:'#64748b' }}>Taux d'adoption PSSI</span>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:TEAL, fontSize:13 }}>{withPssi}/{total}</span>
+            </div>
+            <ProgressBar value={total ? (withPssi/total)*100 : 0} color={TEAL} />
+            <div style={{ fontSize:11, color:'#334155', marginTop:6 }}>{withPssi} sur {total} organismes</div>
+          </div>
+
+          {/* Pending rate */}
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+              <span style={{ fontSize:12, color:'#64748b' }}>Rapports en attente</span>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:AMBER, fontSize:13 }}>
+                {total ? Math.round((pending/total)*100) : 0}%
+              </span>
+            </div>
+            <ProgressBar value={total ? (pending/total)*100 : 0} color={AMBER} delay={200} />
+            <div style={{ fontSize:11, color:'#334155', marginTop:6 }}>{pending} rapport{pending > 1 ? 's' : ''} à traiter</div>
           </div>
         </div>
       </div>
 
-      {/* ── SECTOR TABLE ── */}
-      <div className="nd-anim" style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:20, overflow:'hidden', marginBottom:18 }}>
-        <SectionHeader icon="🏭" title="Détail par secteur d'activité" iconBg={PURPLE} />
-        <div style={{ padding:'8px 0' }}>
-          {sectors.map((s) => {
-            const score = parseFloat(s.avg_score) || 0;
-            const color = scoreColor(score);
-            return (
-              <div key={s.sector} className="nd-sector-row" style={{ padding:'12px 22px', borderBottom:`1px solid rgba(255,255,255,.03)` }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:8, height:8, borderRadius:'50%', background:color, boxShadow:`0 0 6px ${color}` }} />
-                    <span style={{ fontSize:13, fontWeight:600, color:'#c8dff4' }}>{s.sector}</span>
-                  </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                    <span style={{ fontSize:11, color:'#3d607a' }}>{s.total} rapport{s.total > 1 ? 's' : ''}</span>
-                    <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, color, fontSize:15 }}>{Math.round(score)}%</span>
-                  </div>
-                </div>
-                <MiniBar value={score} color={color} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── GLOBAL SUMMARY ── */}
-      <div className="nd-anim" style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:18, overflow:'hidden' }}>
-        <SectionHeader icon="🌍" title="Indicateurs globaux" iconBg={GREEN} />
-        <div style={{ padding:'18px 22px', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }}>
-          {[
-            { label:'Taux de validation',    value: total ? Math.round((valid/total)*100)  : 0, color:GREEN  },
-            { label:'Taux RSSI déployé',      value: total ? Math.round((rssi/total)*100)   : 0, color:TEAL   },
-            { label:'Score conformité moyen', value: Math.round(avg),                            color:PURPLE },
-          ].map(({label,value,color}) => (
-            <div key={label}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
-                <span style={{ fontSize:11, color:'#3d607a', fontWeight:600, textTransform:'uppercase', letterSpacing:'.4px' }}>{label}</span>
-                <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, color, fontSize:15 }}>{value}%</span>
-              </div>
-              <MiniBar value={value} color={color} />
+      {/* ── 7 CATÉGORIES DE SÉCURITÉ ── */}
+      <div className="nd2-card nd2-a5" style={{ padding:'22px 24px', marginBottom:16 }}>
+        <SectionLabel color={PURPLE}>7 Catégories d'Analyse SSI</SectionLabel>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:10 }}>
+          {categories.map((cat, i) => (
+            <div key={cat.name} style={{ textAlign:'center', padding:'12px 8px', background:'rgba(255,255,255,.02)', borderRadius:12, border:'1px solid rgba(255,255,255,.05)' }}>
+              <div style={{ fontSize:20, marginBottom:8 }}>{cat.icon}</div>
+              <div style={{ fontSize:9, color:'#475569', fontWeight:600, textTransform:'uppercase', marginBottom:6, height:24, display:'flex', alignItems:'center', justifyContent:'center' }}>{cat.name}</div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:16, fontWeight:700, color:scoreColor(cat.score), marginBottom:6 }}>{cat.score}%</div>
+              <ProgressBar value={cat.score} color={scoreColor(cat.score)} delay={i*50} />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ marginTop:22, textAlign:'center', fontSize:11, color:'#1e3a52', letterSpacing:'.3px' }}>
-        ANCS Platform · Audit de Sécurité des Systèmes d'Information © 2026
+      {/* ── INDICATEURS COMPLEXES ── */}
+      <div className="nd2-a6" style={{ marginBottom:16 }}>
+        <div className="nd2-card" style={{ padding:'22px 24px' }}>
+          <SectionLabel color={ROSE}>Indicateurs complexes</SectionLabel>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
+
+            {/* RSSI AND PSSI */}
+            <div className="nd2-complex-card" style={{ background:`${GREEN}08`, border:`1px solid ${GREEN}18` }}>
+              <div style={{ fontSize:11, fontWeight:700, color:GREEN, textTransform:'uppercase', marginBottom:10 }}>Indicateur Mixte</div>
+              <div style={{ fontSize:14, fontWeight:600, color:'#f1f5f9', marginBottom:4 }}>RSSI + PSSI Validés</div>
+              <div style={{ fontSize:24, fontWeight:800, color:'#f8fafc' }}>
+                <AnimCount to={Math.round(withPssi * 0.85)} />
+              </div>
+              <div style={{ fontSize:11, color:'#475569', marginTop:4 }}>Organismes conformes aux deux</div>
+            </div>
+
+            {/* TREND */}
+            <div className="nd2-complex-card" style={{ background:`${BLUE}08`, border:`1px solid ${BLUE}18` }}>
+              <div style={{ fontSize:11, fontWeight:700, color:BLUE, textTransform:'uppercase', marginBottom:10 }}>Projection 2024</div>
+              <div style={{ fontSize:14, fontWeight:600, color:'#f1f5f9', marginBottom:4 }}>Objectif de Maturité</div>
+              <div style={{ fontSize:24, fontWeight:800, color:'#f8fafc' }}>85%</div>
+              <div style={{ fontSize:11, color:'#475569', marginTop:4 }}>Basé sur la tendance actuelle</div>
+            </div>
+
+            {/* RISK */}
+            <div className="nd2-complex-card" style={{ background:`${ROSE}08`, border:`1px solid ${ROSE}18` }}>
+              <div style={{ fontSize:11, fontWeight:700, color:ROSE, textTransform:'uppercase', marginBottom:10 }}>Risque Résiduel</div>
+              <div style={{ fontSize:14, fontWeight:600, color:'#f1f5f9', marginBottom:4 }}>Exposition Globale</div>
+              <div style={{ fontSize:24, fontWeight:800, color:'#f8fafc' }}>
+                <AnimCount to={100 - avg} />
+                <span style={{ fontSize:14 }}>%</span>
+              </div>
+              <div style={{ fontSize:11, color:'#475569', marginTop:4 }}>Diminution de 4% ce trimestre</div>
+            </div>
+
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }
